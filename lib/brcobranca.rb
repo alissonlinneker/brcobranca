@@ -209,4 +209,11 @@ module Brcobranca
     autoload :Errors, 'brcobranca/util/errors'
     autoload :Itau, "brcobranca/util/itau"
   end
+
+  module PessoaLookup
+    autoload :CpfCnpjComBrLookup, 'brcobranca/pessoa_lookup/cpf_cnpj_com_br_lookup'
+    autoload :Resolver,           'brcobranca/pessoa_lookup/resolver'
+  end
 end
+
+require 'brcobranca/pessoa_lookup'
