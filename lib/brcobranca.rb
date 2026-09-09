@@ -210,6 +210,7 @@ module Brcobranca
     autoload :Itau, "brcobranca/util/itau"
   end
 
+  # Consulta opcional de dados de pessoa por CPF/CNPJ para preencher o sacado.
   module PessoaLookup
     autoload :CpfCnpjComBrLookup, 'brcobranca/pessoa_lookup/cpf_cnpj_com_br_lookup'
     autoload :Resolver,           'brcobranca/pessoa_lookup/resolver'

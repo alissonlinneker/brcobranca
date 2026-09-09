@@ -82,6 +82,23 @@ RSpec.describe Brcobranca::PessoaLookup::Resolver do
     end
   end
 
+  describe 'CNPJ alfanumérico' do
+    let(:dados_alfa) { dados_cnpj.merge(documento: '12ABC34501DE35') }
+
+    before { allow(fonte).to receive(:consultar_cnpj).and_return(dados_alfa) }
+
+    it 'rejeita no formato :cnab, que só aceita posições numéricas' do
+      expect { resolver.por_cnpj('12ABC34501DE35', formato: :cnab) }
+        .to raise_error(Brcobranca::PessoaLookup::DocumentoInvalido)
+    end
+
+    it 'aceita no formato :boleto' do
+      atributos = resolver.por_cnpj('12ABC34501DE35', formato: :boleto)
+
+      expect(atributos[:sacado_documento]).to eq('12ABC34501DE35')
+    end
+  end
+
   describe 'formato inválido' do
     it 'levanta ArgumentError' do
       allow(fonte).to receive(:consultar_cpf).and_return(dados_cpf)

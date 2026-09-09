@@ -31,6 +31,9 @@ module Brcobranca
       HOST_PADRAO = 'api.cpfcnpj.com.br'
       # Tempo limite padrão, em segundos, para abertura e leitura da conexão.
       TIMEOUT_PADRAO = 8
+      # Campos que precisam vir preenchidos para montar um sacado utilizável.
+      # +numero+ e +complemento+ ficam de fora por serem legitimamente vazios.
+      CAMPOS_OBRIGATORIOS = %i[documento nome logradouro bairro cep cidade uf].freeze
 
       attr_reader :token, :pacote_cpf, :pacote_cnpj, :host, :timeout
 
@@ -55,7 +58,7 @@ module Brcobranca
       # @param cpf [String] CPF com ou sem máscara.
       # @return [Hash]
       def consultar_cpf(cpf)
-        corpo = requisitar(pacote_cpf, somente_numeros(cpf))
+        corpo = requisitar(pacote_cpf, exigir_tamanho(somente_numeros(cpf), 11, 'CPF'))
         pessoa = { documento: somente_numeros(corpo['cpf']), nome: corpo['nome'] }
 
         normalizar(pessoa.merge(endereco(corpo, corpo['endereco'])))
@@ -66,7 +69,7 @@ module Brcobranca
       # @param cnpj [String] CNPJ com ou sem máscara.
       # @return [Hash]
       def consultar_cnpj(cnpj)
-        corpo = requisitar(pacote_cnpj, somente_alfanumericos(cnpj))
+        corpo = requisitar(pacote_cnpj, exigir_tamanho(somente_alfanumericos(cnpj), 14, 'CNPJ'))
         matriz = corpo['matrizEndereco'] || {}
         pessoa = { documento: somente_alfanumericos(corpo['cnpj']), nome: corpo['razao'] }
         logradouro = monta_logradouro(matriz['tipo'], matriz['logradouro'])
@@ -101,13 +104,20 @@ module Brcobranca
 
         raise Indisponivel, "resposta HTTP #{resposta.code}" unless resposta.is_a?(Net::HTTPSuccess)
 
-        JSON.parse(resposta.body)
+        interpretar(resposta.body)
       rescue Timeout::Error => e
         raise TempoEsgotado, "tempo limite excedido: #{e.message}"
       rescue JSON::ParserError => e
         raise Indisponivel, "resposta ilegível: #{e.message}"
       rescue SystemCallError, SocketError, IOError, OpenSSL::SSL::SSLError => e
         raise Indisponivel, "falha de conexão: #{e.message}"
+      end
+
+      def interpretar(body)
+        corpo = JSON.parse(body)
+        return corpo if corpo.is_a?(Hash)
+
+        raise Indisponivel, 'resposta ilegível: o JSON não é um objeto'
       end
 
       def executar(uri)
@@ -117,7 +127,24 @@ module Brcobranca
       end
 
       def normalizar(campos)
-        campos.transform_values { |valor| valor.to_s.strip }
+        resultado = campos.transform_values { |valor| valor.to_s.strip }
+        exigir_preenchimento(resultado)
+        resultado
+      end
+
+      # Falha fechada: um documento sem os campos essenciais indica resposta
+      # parcial e não deve virar um sacado com endereço pela metade.
+      def exigir_preenchimento(campos)
+        ausentes = CAMPOS_OBRIGATORIOS.select { |campo| campos[campo].to_s.empty? }
+        return if ausentes.empty?
+
+        raise Indisponivel, "resposta incompleta: campos ausentes (#{ausentes.join(', ')})"
+      end
+
+      def exigir_tamanho(documento, tamanho, tipo)
+        return documento if documento.length == tamanho
+
+        raise DocumentoInvalido, "#{tipo} inválido: são esperados #{tamanho} caracteres"
       end
 
       def monta_logradouro(tipo, logradouro)

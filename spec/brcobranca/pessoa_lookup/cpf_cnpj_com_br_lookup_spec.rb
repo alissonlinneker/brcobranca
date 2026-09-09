@@ -126,5 +126,36 @@ RSpec.describe Brcobranca::PessoaLookup::CpfCnpjComBrLookup do
       expect { fonte.consultar_cpf('00000000000') }
         .to raise_error(Brcobranca::PessoaLookup::Indisponivel)
     end
+
+    it 'levanta DocumentoInvalido para CPF com tamanho errado, sem consultar' do
+      allow(Net::HTTP).to receive(:start)
+
+      expect { fonte.consultar_cpf('123') }
+        .to raise_error(Brcobranca::PessoaLookup::DocumentoInvalido)
+      expect(Net::HTTP).not_to have_received(:start)
+    end
+
+    it 'levanta DocumentoInvalido para CNPJ com tamanho errado, sem consultar' do
+      allow(Net::HTTP).to receive(:start)
+
+      expect { fonte.consultar_cnpj('11.222.333/0001') }
+        .to raise_error(Brcobranca::PessoaLookup::DocumentoInvalido)
+      expect(Net::HTTP).not_to have_received(:start)
+    end
+
+    it 'levanta Indisponivel quando o JSON não é um objeto' do
+      allow(Net::HTTP).to receive(:start).and_return(resposta(Net::HTTPOK, [1, 2].to_json))
+
+      expect { fonte.consultar_cpf('00000000000') }
+        .to raise_error(Brcobranca::PessoaLookup::Indisponivel)
+    end
+
+    it 'levanta Indisponivel quando o status é 1 mas faltam campos' do
+      parcial = { status: 1, cpf: '000.000.000-00', nome: 'Test Token' }.to_json
+      allow(Net::HTTP).to receive(:start).and_return(resposta(Net::HTTPOK, parcial))
+
+      expect { fonte.consultar_cpf('00000000000') }
+        .to raise_error(Brcobranca::PessoaLookup::Indisponivel)
+    end
   end
 end

@@ -78,7 +78,7 @@ module Brcobranca
 
       def para_cnab(dados)
         {
-          documento_sacado: dados[:documento],
+          documento_sacado: documento_numerico(dados[:documento]),
           nome_sacado: dados[:nome],
           endereco_sacado: linha_logradouro(dados),
           bairro_sacado: dados[:bairro],
@@ -108,6 +108,16 @@ module Brcobranca
                  dados[:cidade],
                  dados[:uf]
                ])
+      end
+
+      # O CNAB grava o documento em posições numéricas de tamanho fixo, então um
+      # CNPJ alfanumérico não é representável ali e é rejeitado explicitamente.
+      def documento_numerico(documento)
+        texto = documento.to_s
+        return texto unless texto.match?(/[^0-9]/)
+
+        raise DocumentoInvalido,
+              "documento alfanumérico (#{texto}) não cabe nos campos numéricos do CNAB; use o formato :boleto"
       end
 
       def juntar(partes)
