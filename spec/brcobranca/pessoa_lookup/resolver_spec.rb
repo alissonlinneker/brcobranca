@@ -80,6 +80,14 @@ RSpec.describe Brcobranca::PessoaLookup::Resolver do
       expect { resolver.por_documento('123') }
         .to raise_error(Brcobranca::PessoaLookup::DocumentoInvalido)
     end
+
+    it 'não trata como CPF um documento de 11 posições com letras' do
+      allow(fonte).to receive(:consultar_cpf)
+
+      expect { resolver.por_documento('ABCDEFGHIJK') }
+        .to raise_error(Brcobranca::PessoaLookup::DocumentoInvalido)
+      expect(fonte).not_to have_received(:consultar_cpf)
+    end
   end
 
   describe 'CNPJ alfanumérico' do

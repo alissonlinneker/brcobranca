@@ -157,5 +157,21 @@ RSpec.describe Brcobranca::PessoaLookup::CpfCnpjComBrLookup do
       expect { fonte.consultar_cpf('00000000000') }
         .to raise_error(Brcobranca::PessoaLookup::Indisponivel)
     end
+
+    it 'levanta Indisponivel quando matrizEndereco não é um objeto, sem quebrar' do
+      corpo = { status: 1, cnpj: '11.222.333/0001-81', razao: 'TOKEN TEST LTDA', matrizEndereco: [] }.to_json
+      allow(Net::HTTP).to receive(:start).and_return(resposta(Net::HTTPOK, corpo))
+
+      expect { fonte.consultar_cnpj('11.222.333/0001-81') }
+        .to raise_error(Brcobranca::PessoaLookup::Indisponivel)
+    end
+
+    it 'levanta Indisponivel quando o CNPJ responde sem endereço' do
+      corpo = { status: 1, cnpj: '11.222.333/0001-81', razao: 'TOKEN TEST LTDA' }.to_json
+      allow(Net::HTTP).to receive(:start).and_return(resposta(Net::HTTPOK, corpo))
+
+      expect { fonte.consultar_cnpj('11.222.333/0001-81') }
+        .to raise_error(Brcobranca::PessoaLookup::Indisponivel)
+    end
   end
 end

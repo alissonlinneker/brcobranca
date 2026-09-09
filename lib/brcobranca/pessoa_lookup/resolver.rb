@@ -48,8 +48,10 @@ module Brcobranca
         formatar(fonte.consultar_cnpj(cnpj), formato)
       end
 
-      # Resolve um documento detectando automaticamente CPF (11 dígitos) ou
-      # CNPJ (14 caracteres).
+      # Resolve um documento detectando automaticamente CPF (11 dígitos
+      # numéricos) ou CNPJ (14 caracteres alfanuméricos, conforme o padrão de
+      # 2026). O CPF não admite letras, então um valor alfanumérico de 11
+      # posições é considerado inválido em vez de ser tratado como CPF.
       #
       # @param documento [String]
       # @param formato [Symbol] +:cnab+ ou +:boleto+.
@@ -57,9 +59,10 @@ module Brcobranca
       def por_documento(documento, formato: :cnab)
         limpo = documento.to_s.gsub(/[^0-9A-Za-z]/, '')
 
-        case limpo.size
-        when 11 then por_cpf(documento, formato: formato)
-        when 14 then por_cnpj(documento, formato: formato)
+        if limpo.match?(/\A\d{11}\z/)
+          por_cpf(documento, formato: formato)
+        elsif limpo.match?(/\A[0-9A-Za-z]{14}\z/)
+          por_cnpj(documento, formato: formato)
         else
           raise DocumentoInvalido, "documento deve ter 11 (CPF) ou 14 (CNPJ) caracteres: #{documento}"
         end

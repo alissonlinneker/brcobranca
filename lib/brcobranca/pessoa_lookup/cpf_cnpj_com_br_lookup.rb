@@ -70,7 +70,7 @@ module Brcobranca
       # @return [Hash]
       def consultar_cnpj(cnpj)
         corpo = requisitar(pacote_cnpj, exigir_tamanho(somente_alfanumericos(cnpj), 14, 'CNPJ'))
-        matriz = corpo['matrizEndereco'] || {}
+        matriz = hash_ou_vazio(corpo['matrizEndereco'])
         pessoa = { documento: somente_alfanumericos(corpo['cnpj']), nome: corpo['razao'] }
         logradouro = monta_logradouro(matriz['tipo'], matriz['logradouro'])
 
@@ -158,6 +158,13 @@ module Brcobranca
 
       def texto(valor)
         valor.to_s.strip
+      end
+
+      # Um JSON válido pode trazer +matrizEndereco+ como array, escalar ou nulo.
+      # Só um Hash é utilizável; qualquer outro formato é tratado como ausência de
+      # endereço e resulta em falha fechada (Indisponivel) na normalização.
+      def hash_ou_vazio(valor)
+        valor.is_a?(Hash) ? valor : {}
       end
 
       def somente_numeros(valor)
